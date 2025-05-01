@@ -29,9 +29,18 @@ Base = declarative_base()
 
 
 def get_db():
-    """Dependency to get a database session."""
+    """
+        Dependency to get a database session.
+    """
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+
+def create_tables() -> None:
+    """
+        Creates tables if it does not already exist.
+    """
+    Base.metadata.create_all(engine, checkfirst=True)
