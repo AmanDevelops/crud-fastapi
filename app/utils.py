@@ -19,8 +19,9 @@ def create_jwt(payload: dict) -> str:
     """
     Creates JWT Token with secret key from config.py
     """
-    payload['exp'] = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=config.JWT_EXPIRY_TIME)
-    return jwt.encode(payload, config.JWT_SECRET_KEY, algorithm='HS256')
+    payload_copy = payload.copy()
+    payload_copy['exp'] = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=config.JWT_EXPIRY_TIME)
+    return jwt.encode(payload_copy, config.JWT_SECRET_KEY, algorithm='HS256')
 
 def verify_jwt(token: str) -> dict:
     try:
