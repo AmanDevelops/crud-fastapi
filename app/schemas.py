@@ -9,3 +9,10 @@ class LoginDetails(BaseModel):
     """
     username: str
     password: str
+
+class ReviewDetails(BaseModel):
+    """
+    Schema for user reviews, including a title and description.
+    """
+    title: str
+    description: str
