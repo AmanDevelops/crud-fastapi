@@ -2,11 +2,14 @@ from fastapi import FastAPI, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import User
+from app.models import User, Review
 from app.schemas import LoginDetails
-from app.utils import verify_password, create_jwt
+from app.utils import verify_password, create_jwt, verify_jwt
+from fastapi.security import OAuth2PasswordBearer  # Used for OAuth2 authentication, tokenUrl specifies the endpoint for obtaining tokens
+
 
 app = FastAPI()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 @app.post("/user/login")
@@ -44,6 +47,36 @@ def user_login(login_details: LoginDetails, db: Session = Depends(get_db)):
                 "auth_token": jwt_token,
                 "role": user.role
             },
+            media_type="application/json",
+            status_code=200,
+        )
+
+@app.get("/api/v1/get/{id}")
+def fetch_data(id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """
+    Fetches review data based on the provided review ID.
+
+    Args:
+        id: The ID of the review to fetch.
+        token: The JWT token for authentication.
+        db: Database session dependency.
+
+    Returns:
+        A JSON response containing the review data if found, or an error message if not found or unauthorized.
+    """
+    is_valid = verify_jwt(token)
+    if not is_valid['success']:
+        return is_valid
+    
+    review = db.query(Review).filter_by(id=id).first()
+    if not review:
+        return JSONResponse(
+            content={"success": False, "error": "Review Not Found"},
+            media_type="application/json",
+            status_code=404,
+        )
+    return JSONResponse(
+            content={"success": True, "data": {"id": review.id, "title": review.title, "description": review.description, "is_active": review.is_active}},
             media_type="application/json",
             status_code=200,
         )
