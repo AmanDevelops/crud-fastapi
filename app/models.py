@@ -17,7 +17,13 @@ class Review(Base):
 class User(Base):
     """
         Represents users in the database.
+
+        Fields:
+        - username: Unique identifier for the user.
+        - password: User's password (hashed).
+        - role: Role of the user, defaults to "USER".
     """
     __tablename__ = "users"
     username = Column(String, unique=True, primary_key=True)
     password = Column(String, nullable=False)
+    role = Column(String, default="USER")

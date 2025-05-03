@@ -25,23 +25,24 @@ def user_login(login_details: LoginDetails, db: Session = Depends(get_db)):
     user = db.query(User).filter_by(username=login_details.username).first()
     if user is None or not verify_password(login_details.password, user.password):
         return JSONResponse(
-            content={"error": "Invalid username or password"},
+            content={"success": False, "error": "Invalid username or password"},
             media_type="application/json",
             status_code=401,
         )
 
     jwt_payload = {
         "username": user.username,
-        "role":"ADMIN"
+        "role":user.role
     }
 
     jwt_token = create_jwt(jwt_payload)
 
     return JSONResponse(
             content={
+                "success": True,
                 "username": user.username,
                 "auth_token": jwt_token,
-                "isValidated": True,
+                "role": user.role
             },
             media_type="application/json",
             status_code=200,
