@@ -107,3 +107,41 @@ def add_data(review_details: ReviewDetails, token: str = Depends(oauth2_scheme),
             status_code=200,
         )
     
+@app.put("/api/v1/update/{id}")
+def update_data(id: int, review_details: ReviewDetails, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """
+    Updates an existing review in the database based on the provided review ID.
+
+    Args:
+        id: The ID of the review to update.
+        review_details: The updated details of the review (title, description, and is_active status).
+        token: The JWT token for authentication.
+        db: Database session dependency.
+
+    Returns:
+        A JSON response containing the success status and the updated review data, or an error message if unauthorized or the review is not found.
+    """
+    is_valid = verify_jwt(token)
+    if not is_valid['success']:
+        return is_valid
+    
+    review = db.query(Review).filter_by(id=id).first()
+    if not review:
+        return JSONResponse(
+            content={"success": False, "error": "Review Not Found"},
+            media_type="application/json",
+            status_code=404,
+        )
+
+    review.title = review_details.title if review_details.title is not None else review.title
+    review.description = review_details.description if review_details.description is not None else review.description
+    review.is_active = review_details.is_active if review_details.is_active is not None else review.is_active
+
+    db.commit()
+
+    return JSONResponse(
+            content={"success": True, "data": {"id": review.id, "title": review.title, "description": review.description, "is_active": review.is_active}},
+            media_type="application/json",
+            status_code=200,
+        )
+
