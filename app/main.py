@@ -51,6 +51,20 @@ def user_login(login_details: LoginDetails, db: Session = Depends(get_db)):
             status_code=200,
         )
 
+def get_review_by_id(id: int, db: Session):
+    """
+    Helper function to fetch a review by ID.
+
+    Args:
+        id: The ID of the review to fetch.
+        db: Database session dependency.
+
+    Returns:
+        The review object if found, or None if not found.
+    """
+    return db.query(Review).filter_by(id=id).first()
+
+
 @app.get("/api/v1/get/{id}")
 def fetch_data(id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     """
@@ -68,7 +82,7 @@ def fetch_data(id: int, token: str = Depends(oauth2_scheme), db: Session = Depen
     if not is_valid['success']:
         return is_valid
     
-    review = db.query(Review).filter_by(id=id).first()
+    review = get_review_by_id(id, db)
     if not review:
         return JSONResponse(
             content={"success": False, "error": "Review Not Found"},
@@ -125,7 +139,7 @@ def update_data(id: int, review_details: ReviewDetails, token: str = Depends(oau
     if not is_valid['success']:
         return is_valid
     
-    review = db.query(Review).filter_by(id=id).first()
+    review = get_review_by_id(id, db)
     if not review:
         return JSONResponse(
             content={"success": False, "error": "Review Not Found"},
@@ -145,3 +159,37 @@ def update_data(id: int, review_details: ReviewDetails, token: str = Depends(oau
             status_code=200,
         )
 
+@app.delete("/api/v1/delete/{id}")
+def delete_review(id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """
+    Deletes a review from the database based on the provided review ID.
+
+    Args:
+        id: The ID of the review to delete.
+        token: The JWT token for authentication.
+        db: Database session dependency.
+
+    Returns:
+        A JSON response containing the success status and a message indicating the deletion,
+        or an error message if unauthorized or the review is not found.
+    """
+    is_valid = verify_jwt(token)
+    if not is_valid['success']:
+        return is_valid
+    
+    review = get_review_by_id(id, db)
+    if not review:
+        return JSONResponse(
+            content={"success": False, "error": "Review Not Found"},
+            media_type="application/json",
+            status_code=404,
+        )
+
+    db.delete(review)
+    db.commit()
+
+    return JSONResponse(
+            content={"success": True, "message": "Review successfully deleted"},
+            media_type="application/json",
+            status_code=200,
+        )
