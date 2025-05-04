@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -6,11 +6,21 @@ from app.models import User, Review
 from app.schemas import LoginDetails, ReviewDetails
 from app.utils import verify_password, create_jwt, verify_jwt
 from fastapi.security import OAuth2PasswordBearer  # Used for OAuth2 authentication, tokenUrl specifies the endpoint for obtaining tokens
-
+from app.exceptions import *
 
 app = FastAPI()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+@app.exception_handler(AppException)
+async def app_exception_handler(request: Request, exc: AppException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        media_type="application/json",
+        content={
+            "success": False,
+            "message": exc.message
+        }
+    )
 
 @app.post("/user/login")
 def user_login(login_details: LoginDetails, db: Session = Depends(get_db)):
@@ -27,18 +37,12 @@ def user_login(login_details: LoginDetails, db: Session = Depends(get_db)):
 
     user = db.query(User).filter_by(username=login_details.username).first()
     if user is None or not verify_password(login_details.password, user.password):
-        return JSONResponse(
-            content={"success": False, "error": "Invalid username or password"},
-            media_type="application/json",
-            status_code=401,
-        )
+        raise InvalidCredentialsException()
 
-    jwt_payload = {
+    jwt_token = create_jwt({
         "username": user.username,
         "role":user.role
-    }
-
-    jwt_token = create_jwt(jwt_payload)
+    })
 
     return JSONResponse(
             content={
@@ -62,7 +66,10 @@ def get_review_by_id(id: int, db: Session):
     Returns:
         The review object if found, or None if not found.
     """
-    return db.query(Review).filter_by(id=id).first()
+    review = db.query(Review).filter_by(id=id).first()
+    if review is None:
+        raise NotFoundException()
+    return review
 
 
 @app.get("/api/v1/get/{id}")
@@ -78,19 +85,20 @@ def fetch_data(id: int, token: str = Depends(oauth2_scheme), db: Session = Depen
     Returns:
         A JSON response containing the review data if found, or an error message if not found or unauthorized.
     """
-    is_valid = verify_jwt(token)
-    if not is_valid['success']:
-        return is_valid
-    
+    verify_jwt(token)
+
     review = get_review_by_id(id, db)
-    if not review:
-        return JSONResponse(
-            content={"success": False, "error": "Review Not Found"},
-            media_type="application/json",
-            status_code=404,
-        )
+
     return JSONResponse(
-            content={"success": True, "data": {"id": review.id, "title": review.title, "description": review.description, "is_active": review.is_active}},
+            content={
+                "success": True, 
+                "data": {
+                    "id": review.id, 
+                    "title": review.title, 
+                    "description": review.description, 
+                    "is_active": review.is_active
+                }
+            },
             media_type="application/json",
             status_code=200,
         )
@@ -107,14 +115,15 @@ def add_data(review_details: ReviewDetails, token: str = Depends(oauth2_scheme),
     Returns:
         A JSON response containing the success status and the newly added review data, or an error message if unauthorized.
     """
-    is_valid = verify_jwt(token)
-    if not is_valid['success']:
-        return is_valid
+    verify_jwt(token)
+
+    if review_details.title is None or review_details.description is None:
+        raise MissingDataException()
     
     new_review = Review(title=review_details.title, description=review_details.description)
     db.add(new_review)
-
     db.commit()
+
     return JSONResponse(
             content={"success": True, "data": {"id": new_review.id, "title": new_review.title, "description": new_review.description, "is_active": new_review.is_active}},
             media_type="application/json",
@@ -135,17 +144,8 @@ def update_data(id: int, review_details: ReviewDetails, token: str = Depends(oau
     Returns:
         A JSON response containing the success status and the updated review data, or an error message if unauthorized or the review is not found.
     """
-    is_valid = verify_jwt(token)
-    if not is_valid['success']:
-        return is_valid
-    
+    verify_jwt(token)
     review = get_review_by_id(id, db)
-    if not review:
-        return JSONResponse(
-            content={"success": False, "error": "Review Not Found"},
-            media_type="application/json",
-            status_code=404,
-        )
 
     review.title = review_details.title if review_details.title is not None else review.title
     review.description = review_details.description if review_details.description is not None else review.description
@@ -173,17 +173,9 @@ def delete_review(id: int, token: str = Depends(oauth2_scheme), db: Session = De
         A JSON response containing the success status and a message indicating the deletion,
         or an error message if unauthorized or the review is not found.
     """
-    is_valid = verify_jwt(token)
-    if not is_valid['success']:
-        return is_valid
-    
+    verify_jwt(token)
     review = get_review_by_id(id, db)
-    if not review:
-        return JSONResponse(
-            content={"success": False, "error": "Review Not Found"},
-            media_type="application/json",
-            status_code=404,
-        )
+
 
     db.delete(review)
     db.commit()

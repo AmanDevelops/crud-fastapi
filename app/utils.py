@@ -2,6 +2,7 @@ import bcrypt
 import app.config as config
 import datetime
 import jwt
+from app.exceptions import *
 
 def encrypt_password(password: str) -> str:
     """Hashes a password using bcrypt."""
@@ -24,19 +25,18 @@ def create_jwt(payload: dict) -> str:
     return jwt.encode(payload_copy, config.JWT_SECRET_KEY, algorithm='HS256')
 
 def verify_jwt(token: str) -> dict:
+    """
+    Verifies a JWT token using the secret key from config.py.
+
+    Raises:
+        UnauthorizedException: If the token has expired or is invalid.
+
+    Returns:
+        dict: The decoded payload of the JWT token if valid.
+    """
     try:
-        decoded = jwt.decode(token, config.JWT_SECRET_KEY, algorithms=["HS256"])
-        return {
-            "success": True,
-            "payload": decoded
-        }
+        return jwt.decode(token, config.JWT_SECRET_KEY, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
-        return {
-            "success": False,
-            "code": "TOKEN_EXPIRED"
-        }
+        raise UnauthorizedException("Authentication token has expired")
     except jwt.InvalidTokenError:
-        return {
-            "success": False,
-            "code": "INVALID_TOKEN"
-        }
+        raise UnauthorizedException("Authentication token is invalid")
