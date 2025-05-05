@@ -18,7 +18,7 @@ DATABASE_URL_OBJECT = URL.create(
     password=DB_PASSWORD,
     host=DB_HOST,
     database=DB_NAME,
-    port=DB_PORT
+    port=DB_PORT,
 )
 
 engine = create_engine(DATABASE_URL_OBJECT)
@@ -30,7 +30,7 @@ Base = declarative_base()
 
 def get_db():
     """
-        Dependency to get a database session.
+    Dependency to get a database session.
     """
     db = SessionLocal()
     try:
@@ -41,6 +41,6 @@ def get_db():
 
 def create_tables() -> None:
     """
-        Creates tables if it does not already exist.
+    Creates tables if it does not already exist.
     """
     Base.metadata.create_all(engine, checkfirst=True)

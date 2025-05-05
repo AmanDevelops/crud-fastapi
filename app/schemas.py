@@ -6,10 +6,12 @@ from typing import Optional
 
 class LoginDetails(BaseModel):
     """
-        Schema for user login credentials.
+    Schema for user login credentials.
     """
+
     username: str
     password: str
+
 
 class ReviewDetails(BaseModel):
     """
@@ -20,6 +22,7 @@ class ReviewDetails(BaseModel):
     - description (Optional[str]): The description of the review. Defaults to None.
     - is_active (Optional[bool]): Indicates if the review is active. Defaults to None.
     """
+
     title: Optional[str] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None

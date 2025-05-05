@@ -5,22 +5,23 @@ from app.database import get_db
 from app.models import User, Review
 from app.schemas import LoginDetails, ReviewDetails
 from app.utils import verify_password, create_jwt, verify_jwt
-from fastapi.security import OAuth2PasswordBearer  # Used for OAuth2 authentication, tokenUrl specifies the endpoint for obtaining tokens
+from fastapi.security import (
+    OAuth2PasswordBearer,
+)  # Used for OAuth2 authentication, tokenUrl specifies the endpoint for obtaining tokens
 from app.exceptions import *
 
 app = FastAPI()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
 
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException):
     return JSONResponse(
         status_code=exc.status_code,
         media_type="application/json",
-        content={
-            "success": False,
-            "message": exc.message
-        }
+        content={"success": False, "message": exc.message},
     )
+
 
 @app.post("/user/login")
 def user_login(login_details: LoginDetails, db: Session = Depends(get_db)):
@@ -39,21 +40,19 @@ def user_login(login_details: LoginDetails, db: Session = Depends(get_db)):
     if user is None or not verify_password(login_details.password, user.password):
         raise InvalidCredentialsException()
 
-    jwt_token = create_jwt({
-        "username": user.username,
-        "role":user.role
-    })
+    jwt_token = create_jwt({"username": user.username, "role": user.role})
 
     return JSONResponse(
-            content={
-                "success": True,
-                "username": user.username,
-                "auth_token": jwt_token,
-                "role": user.role
-            },
-            media_type="application/json",
-            status_code=200,
-        )
+        content={
+            "success": True,
+            "username": user.username,
+            "auth_token": jwt_token,
+            "role": user.role,
+        },
+        media_type="application/json",
+        status_code=200,
+    )
+
 
 def get_review_by_id(id: int, db: Session):
     """
@@ -73,7 +72,9 @@ def get_review_by_id(id: int, db: Session):
 
 
 @app.get("/api/v1/get/{id}")
-def fetch_data(id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def fetch_data(
+    id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+):
     """
     Fetches review data based on the provided review ID.
 
@@ -90,21 +91,26 @@ def fetch_data(id: int, token: str = Depends(oauth2_scheme), db: Session = Depen
     review = get_review_by_id(id, db)
 
     return JSONResponse(
-            content={
-                "success": True, 
-                "data": {
-                    "id": review.id, 
-                    "title": review.title, 
-                    "description": review.description, 
-                    "is_active": review.is_active
-                }
+        content={
+            "success": True,
+            "data": {
+                "id": review.id,
+                "title": review.title,
+                "description": review.description,
+                "is_active": review.is_active,
             },
-            media_type="application/json",
-            status_code=200,
-        )
+        },
+        media_type="application/json",
+        status_code=200,
+    )
+
 
 @app.post("/api/v1/add")
-def add_data(review_details: ReviewDetails, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def add_data(
+    review_details: ReviewDetails,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+):
     """
     Adds a new review to the database.
 
@@ -119,19 +125,35 @@ def add_data(review_details: ReviewDetails, token: str = Depends(oauth2_scheme),
 
     if review_details.title is None or review_details.description is None:
         raise MissingDataException()
-    
-    new_review = Review(title=review_details.title, description=review_details.description)
+
+    new_review = Review(
+        title=review_details.title, description=review_details.description
+    )
     db.add(new_review)
     db.commit()
 
     return JSONResponse(
-            content={"success": True, "data": {"id": new_review.id, "title": new_review.title, "description": new_review.description, "is_active": new_review.is_active}},
-            media_type="application/json",
-            status_code=200,
-        )
-    
+        content={
+            "success": True,
+            "data": {
+                "id": new_review.id,
+                "title": new_review.title,
+                "description": new_review.description,
+                "is_active": new_review.is_active,
+            },
+        },
+        media_type="application/json",
+        status_code=200,
+    )
+
+
 @app.put("/api/v1/update/{id}")
-def update_data(id: int, review_details: ReviewDetails, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def update_data(
+    id: int,
+    review_details: ReviewDetails,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+):
     """
     Updates an existing review in the database based on the provided review ID.
 
@@ -147,20 +169,41 @@ def update_data(id: int, review_details: ReviewDetails, token: str = Depends(oau
     verify_jwt(token)
     review = get_review_by_id(id, db)
 
-    review.title = review_details.title if review_details.title is not None else review.title
-    review.description = review_details.description if review_details.description is not None else review.description
-    review.is_active = review_details.is_active if review_details.is_active is not None else review.is_active
+    review.title = (
+        review_details.title if review_details.title is not None else review.title
+    )
+    review.description = (
+        review_details.description
+        if review_details.description is not None
+        else review.description
+    )
+    review.is_active = (
+        review_details.is_active
+        if review_details.is_active is not None
+        else review.is_active
+    )
 
     db.commit()
 
     return JSONResponse(
-            content={"success": True, "data": {"id": review.id, "title": review.title, "description": review.description, "is_active": review.is_active}},
-            media_type="application/json",
-            status_code=200,
-        )
+        content={
+            "success": True,
+            "data": {
+                "id": review.id,
+                "title": review.title,
+                "description": review.description,
+                "is_active": review.is_active,
+            },
+        },
+        media_type="application/json",
+        status_code=200,
+    )
+
 
 @app.delete("/api/v1/delete/{id}")
-def delete_review(id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def delete_review(
+    id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+):
     """
     Deletes a review from the database based on the provided review ID.
 
@@ -176,12 +219,11 @@ def delete_review(id: int, token: str = Depends(oauth2_scheme), db: Session = De
     verify_jwt(token)
     review = get_review_by_id(id, db)
 
-
     db.delete(review)
     db.commit()
 
     return JSONResponse(
-            content={"success": True, "message": "Review successfully deleted"},
-            media_type="application/json",
-            status_code=200,
-        )
+        content={"success": True, "message": "Review successfully deleted"},
+        media_type="application/json",
+        status_code=200,
+    )
