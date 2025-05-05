@@ -1,7 +1,8 @@
 """Pydantic models (schemas) for data validation and serialization."""
 
-from pydantic import BaseModel
 from typing import Optional
+
+from pydantic import BaseModel
 
 
 class LoginDetails(BaseModel):

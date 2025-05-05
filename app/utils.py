@@ -1,7 +1,9 @@
-import bcrypt
-import app.config as config
 import datetime
+
+import bcrypt
 import jwt
+
+import app.config as config
 from app.exceptions import *
 
 

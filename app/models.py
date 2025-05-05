@@ -1,6 +1,7 @@
 """Database models for the application."""
 
-from sqlalchemy import Column, String, Integer, Boolean
+from sqlalchemy import Boolean, Column, Integer, String
+
 from app.database import Base
 
 

@@ -1,14 +1,14 @@
-from fastapi import FastAPI, Depends, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.security import \
+    OAuth2PasswordBearer  # Used for OAuth2 authentication, tokenUrl specifies the endpoint for obtaining tokens
 from sqlalchemy.orm import Session
+
 from app.database import get_db
-from app.models import User, Review
-from app.schemas import LoginDetails, ReviewDetails
-from app.utils import verify_password, create_jwt, verify_jwt
-from fastapi.security import (
-    OAuth2PasswordBearer,
-)  # Used for OAuth2 authentication, tokenUrl specifies the endpoint for obtaining tokens
 from app.exceptions import *
+from app.models import Review, User
+from app.schemas import LoginDetails, ReviewDetails
+from app.utils import create_jwt, verify_jwt, verify_password
 
 app = FastAPI()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
